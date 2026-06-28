@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>QR Code ASCII → Imagem</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: sans-serif; background: #111; color: #eee; display: flex; flex-direction: column; align-items: center; padding: 32px 16px; min-height: 100vh; }
+  h1 { font-size: 1.4rem; margin-bottom: 8px; }
+  p { color: #aaa; font-size: 0.9rem; margin-bottom: 16px; }
+  textarea {
+    width: 100%; max-width: 640px; height: 220px;
+    background: #1e1e1e; color: #0f0; border: 1px solid #333;
+    font-family: monospace; font-size: 11px; padding: 10px;
+    border-radius: 6px; resize: vertical;
+  }
+  button {
+    margin-top: 12px; padding: 12px 32px; font-size: 1rem;
+    background: #2563eb; color: #fff; border: none; border-radius: 6px;
+    cursor: pointer; transition: background 0.2s;
+  }
+  button:hover { background: #1d4ed8; }
+  #timer { margin-top: 10px; font-size: 1.1rem; color: #facc15; min-height: 1.5rem; }
+  #result { margin-top: 20px; display: none; text-align: center; }
+  #result canvas { border: 2px solid #333; border-radius: 4px; max-width: 100%; }
+  #download {
+    display: inline-block; margin-top: 12px; padding: 10px 28px;
+    background: #16a34a; color: #fff; border-radius: 6px;
+    text-decoration: none; font-size: 0.95rem;
+  }
+  #download:hover { background: #15803d; }
+  #error { color: #f87171; margin-top: 10px; font-size: 0.9rem; }
+</style>
+</head>
+<body>
+<h1>QR Code ASCII → Imagem</h1>
+<p>Cole o QR code em texto abaixo e clique em Converter</p>
+<textarea id="input" placeholder="Cole aqui o QR code em ASCII..."></textarea>
+<button onclick="convert()">⚡ Converter</button>
+<div id="timer"></div>
+<div id="error"></div>
+<div id="result">
+  <canvas id="canvas"></canvas><br>
+  <a id="download" download="qrcode.png">⬇ Baixar PNG</a>
+</div>
+
+<script>
+function convert() {
+  const start = performance.now();
+  const timerEl = document.getElementById('timer');
+  const errorEl = document.getElementById('error');
+  const resultEl = document.getElementById('result');
+  errorEl.textContent = '';
+  resultEl.style.display = 'none';
+
+  // Live timer
+  const interval = setInterval(() => {
+    timerEl.textContent = '⏱ ' + ((performance.now() - start) / 1000).toFixed(2) + 's';
+  }, 50);
+
+  const text = document.getElementById('input').value;
+  const lines = text.split('\n').filter(l => l.length > 0);
+
+  if (lines.length === 0) {
+    clearInterval(interval);
+    errorEl.textContent = 'Cole um QR code primeiro!';
+    return;
+  }
+
+  const map = { '█': [0,0], '▀': [0,1], '▄': [1,0], ' ': [1,1] };
+  const scale = 8;
+  const width = Math.max(...lines.map(l => l.length));
+  const height = lines.length * 2;
+
+  const canvas = document.getElementById('canvas');
+  canvas.width = width * scale;
+  canvas.height = height * scale;
+  const ctx = canvas.getContext('2d');
+  const img = ctx.createImageData(width * scale, height * scale);
+
+  for (let row = 0; row < lines.length; row++) {
+    const line = lines[row];
+    for (let col = 0; col < width; col++) {
+      const ch = col < line.length ? line[col] : ' ';
+      const [top, bot] = map[ch] ?? [1, 1];
+      for (let s = 0; s < scale; s++) {
+        for (let t = 0; t < scale; t++) {
+          // top pixel row
+          const i1 = ((row * 2 * scale + s) * width * scale + col * scale + t) * 4;
+          const v1 = top === 0 ? 0 : 255;
+          img.data[i1] = img.data[i1+1] = img.data[i1+2] = v1; img.data[i1+3] = 255;
+          // bottom pixel row
+          const i2 = (((row * 2 + 1) * scale + s) * width * scale + col * scale + t) * 4;
+          const v2 = bot === 0 ? 0 : 255;
+          img.data[i2] = img.data[i2+1] = img.data[i2+2] = v2; img.data[i2+3] = 255;
+        }
+      }
+    }
+  }
+
+  ctx.putImageData(img, 0, 0);
+
+  const elapsed = ((performance.now() - start) / 1000).toFixed(2);
+  clearInterval(interval);
+  timerEl.textContent = '✅ Concluído em ' + elapsed + 's';
+
+  const link = document.getElementById('download');
+  link.href = canvas.toDataURL('image/png');
+  resultEl.style.display = 'block';
+}
+</script>
+</body>
+</html>
