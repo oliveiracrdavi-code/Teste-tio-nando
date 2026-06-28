@@ -54,10 +54,10 @@
     border-radius: 12px; padding: 20px;
     text-align: center;
   }
-  #result img {
+  #output {
     max-width: 100%; border-radius: 8px;
     image-rendering: pixelated;
-    border: 16px solid #fff; /* quiet zone visual */
+    border: 16px solid #fff;
     background: #fff;
   }
   .result-footer {
@@ -90,7 +90,7 @@
 </header>
 <main>
   <div>
-    <label for="input">Cole o QR code em texto:</label>
+    <label for="input">Cole o QR code em texto (Ctrl+Enter para converter):</label>
     <textarea id="input" placeholder="▄▄▄▄▄▄▄▄▄...&#10;█ ▄▄▄▄▄ █ ...&#10;..."></textarea>
   </div>
   <div class="actions">
@@ -110,7 +110,7 @@
 
 <script>
 const CHAR = { '█': [0,0], '▀': [0,1], '▄': [1,0], ' ': [1,1] };
-const QUIET = 4; // modules of white border for better scanning
+const QUIET = 4;
 
 function convert() {
   const start = performance.now();
@@ -149,15 +149,8 @@ function convert() {
   canvas.height = totalH;
   const ctx = canvas.getContext('2d');
 
-  // White background (quiet zone)
-  ctx.fillStyle = '#ffffff';
-  ctx.fillRect(0, 0, totalW, totalH);
-
-  // Draw modules
   const img = ctx.createImageData(totalW, totalH);
-  // Fill all white first
   img.data.fill(255);
-  for (let i = 3; i < img.data.length; i += 4) img.data[i] = 255;
 
   for (let row = 0; row < rows; row++) {
     const line = lines[row];
@@ -168,13 +161,11 @@ function convert() {
 
       for (let s = 0; s < scale; s++) {
         for (let t = 0; t < scale; t++) {
-          // top half
           const y1 = padPx + row * 2 * scale + s;
           const i1 = (y1 * totalW + px + t) * 4;
           const v1 = top === 0 ? 0 : 255;
           img.data[i1] = img.data[i1+1] = img.data[i1+2] = v1;
 
-          // bottom half
           const y2 = padPx + (row * 2 + 1) * scale + s;
           const i2 = (y2 * totalW + px + t) * 4;
           const v2 = bot === 0 ? 0 : 255;
@@ -191,8 +182,7 @@ function convert() {
   document.getElementById('download').href = dataUrl;
 
   clearInterval(tick);
-  const elapsed = ((performance.now() - start) / 1000).toFixed(2);
-  timerEl.textContent = '✅ ' + elapsed + 's';
+  timerEl.textContent = '✅ ' + ((performance.now() - start) / 1000).toFixed(2) + 's';
 
   resultEl.style.display = 'block';
   resultEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -208,11 +198,10 @@ async function copyImage() {
     btn.textContent = 'Copiado!';
     setTimeout(() => btn.textContent = 'Copiar imagem', 1800);
   } catch {
-    alert('Seu navegador não suporta copiar imagem diretamente. Use o botão Baixar.');
+    alert('Use o botão Baixar PNG.');
   }
 }
 
-// Ctrl+Enter to convert
 document.getElementById('input').addEventListener('keydown', e => {
   if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) convert();
 });
